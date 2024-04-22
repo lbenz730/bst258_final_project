@@ -55,6 +55,9 @@ generate_data <- function(n_trial, n_obs, selection_model, outcome_model, mult) 
 
 ### Function to compute all estimators for a given dataset
 compute_estimators <- function(df) {
+  ### RCT Only Estimator
+  rct_only <- rct_ate(df)
+  
   ### IPSW Estimators
   ipsw_glm <- ipsw(df, model_type = 'GLM', model_formula = S ~ X1 + X2 + X3 + X4)
   ipsw_rf <- ipsw(df, model_type = 'RF', model_formula = S ~ X1 + X2 + X3 + X4)
@@ -74,7 +77,7 @@ compute_estimators <- function(df) {
           outcome_formula = Y ~ X1 + X2 + X3 + X4 + AX1 + AX2 + AX3 + AX4, 
           selection_formula = S ~ X1 + X2 + X3 + X4)
   
-  df_results <- bind_rows(ipsw_glm, ipsw_rf, gformula_lm, gformula_rf, aipsw_lm, aipsw_rf)
+  df_results <- bind_rows(rct_only, ipsw_glm, ipsw_rf, gformula_lm, gformula_rf, aipsw_lm, aipsw_rf)
   
   return(df_results)
 }
