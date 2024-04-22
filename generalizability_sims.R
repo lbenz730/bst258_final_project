@@ -438,12 +438,12 @@ ggplot(df_results %>% filter(tau_hat >= 0, tau_hat <= 40), aes(x = tau_hat, y = 
         axis.title = element_text(size = 32),
         axis.text = element_text(size = 24),
         panel.spacing = unit(2, "lines"),
-        strip.text = element_text(size = 18),
+        strip.text = element_text(size = 16),
         plot.caption = element_text(size = 10),
         legend.text = element_text(size = 24),
         legend.title = element_text(size = 32),
         legend.position = "bottom")
 
-ggsave('figures/generalizability.png', height = 16, width = 21)
+ggsave('figures/generalizability.png', height = 16, width = 22)
 
 
