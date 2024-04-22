@@ -74,11 +74,3 @@ interact <- function(df) {
   return(df)
 }
 
-theme_set(theme_bw() +
-            theme(plot.title = element_text(hjust = 0.5, size = 24),
-                  plot.subtitle = element_text(hjust = 0.5, size = 18),
-                  axis.title = element_text(size = 20),
-                  strip.text = element_text(size = 12),
-                  plot.caption = element_text(size = 10),
-                  legend.text = element_text(size = 12),
-                  legend.position = "bottom"))

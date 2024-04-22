@@ -425,11 +425,22 @@ ggplot(df_results %>% filter(tau_hat >= 0, tau_hat <= 40), aes(x = tau_hat, y = 
                       quantile_lines = T, 
                       quantiles = 0.5, 
                       panel_scaling = F) + 
-  theme(legend.position = 'none') +
   labs(x = 'Estimated ATE',
        y = 'Method',
-       title = 'Simulation Study of Generalizability Estimators')
+       fill = 'Method',
+       title = 'Simulation Study of Generalizability Estimators') + 
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5, size = 44),
+        plot.subtitle = element_text(hjust = 0.5, size = 36),
+        axis.title = element_text(size = 32),
+        axis.text = element_text(size = 24),
+        panel.spacing = unit(2, "lines"),
+        strip.text = element_text(size = 18),
+        plot.caption = element_text(size = 10),
+        legend.text = element_text(size = 24),
+        legend.title = element_text(size = 32),
+        legend.position = "bottom")
 
-ggsave('figures/generalizability.png', height = 12, width = 16)
+ggsave('figures/generalizability.png', height = 16, width = 21)
 
 
