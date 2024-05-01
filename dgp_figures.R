@@ -1,6 +1,8 @@
 library(tidyverse)
 library(ggridges)
+library(ranger)
 source('helpers.R')
+source('estimators.R')
 
 ### Function to generate generalizability data 
 ### Use data generation process similar to (Colnet, 2024)
@@ -50,8 +52,8 @@ generate_data <- function(n_trial, n_obs, selection_model, outcome_model, mult) 
 
 set.seed(19217)
 df1 <- 
-  generate_data(n_trial = 10000,
-                n_obs = 50000,
+  generate_data(n_trial = 1000,
+                n_obs = 5000,
                 mult = 50,
                 selection_model = list('(Intercept)' = -2.5,
                                        'X1' = -0.5, 
@@ -63,7 +65,7 @@ df1 <-
                                      'X2' = 13.7,
                                      'X3' = 13.7,
                                      'X4' = 13.7)) %>% 
-  mutate('pi' = 'Baseline S Incidence ~ 2%')
+  mutate('kappa' = 'Baseline S Incidence ~ 2%')
 
 df2 <- 
   generate_data(n_trial = 1000,
@@ -79,12 +81,12 @@ df2 <-
                                      'X2' = 13.7,
                                      'X3' = 13.7,
                                      'X4' = 13.7)) %>% 
-  mutate('pi' = 'Baseline S Incidence ~ 20%')
+  mutate('kappa' = 'Baseline S Incidence ~ 20%')
 
 df3 <- 
   generate_data(n_trial = 1000,
                 n_obs = 5000,
-                mult = 1,
+                mult = 2,
                 selection_model = list('(Intercept)' = 1.7,
                                        'X1' = -0.5, 
                                        'X2' = -0.3, 
@@ -95,7 +97,7 @@ df3 <-
                                      'X2' = 13.7,
                                      'X3' = 13.7,
                                      'X4' = 13.7)) %>% 
-  mutate('pi' = 'Baseline S Incidence ~ 50%')
+  mutate('kappa' = 'Baseline S Incidence ~ 50%')
 
 
 bind_rows(df1, df2, df3) %>% 
@@ -103,10 +105,10 @@ bind_rows(df1, df2, df3) %>%
                names_to = 'covariate',
                values_to = 'value') %>% 
   mutate('pop' = ifelse(S == 1, 'Trial', 'Non-Trial')) %>% 
-  ggplot(aes(x = value, y = pi)) + 
+  ggplot(aes(x = value, y = kappa)) + 
   facet_wrap(~covariate) +
   geom_vline(xintercept = 1, lwd = 1.2, lty = 2, col = 'grey') + 
-  geom_density_ridges(aes(fill = pop, color = pop),
+  geom_density_ridges(aes(fill = pop),
                       scale = 1,
                       quantile_lines = T,
                       panel_scaling = F,
@@ -130,3 +132,60 @@ bind_rows(df1, df2, df3) %>%
 ggsave('figures/covariate_dist.png', height = 9/1.2, width = 16/1.2)
 
 
+
+
+### Propensity/Outcome figure
+df_preds <- 
+  bind_rows(
+    g_formula_preds(df1, 'LM', Y ~ A:X1 + X2 + X3 + X4) %>% mutate('kappa' = 'Baseline S Incidence ~ 2%'),
+    g_formula_preds(df2, 'LM', Y ~ A:X1 + X2 + X3 + X4) %>% mutate('kappa' = 'Baseline S Incidence ~ 20%'),
+    g_formula_preds(df3, 'LM', Y ~ A:X1 + X2 + X3 + X4) %>% mutate('kappa' = 'Baseline S Incidence ~ 50%'),
+    g_formula_preds(df1, 'RF', Y ~ X1 + X2 + X3 + X4 + AX1 + AX2 + AX3 + AX4) %>% mutate('kappa' = 'Baseline S Incidence ~ 2%'),
+    g_formula_preds(df2, 'RF', Y ~ X1 + X2 + X3 + X4 + AX1 + AX2 + AX3 + AX4) %>% mutate('kappa' = 'Baseline S Incidence ~ 20%'),
+    g_formula_preds(df3, 'RF', Y ~ X1 + X2 + X3 + X4 + AX1 + AX2 + AX3 + AX4) %>% mutate('kappa' = 'Baseline S Incidence ~ 50%'),
+    df1 %>% mutate('mu1' = ifelse(A == 1, Y, Y + 27.4*X1),
+                   'mu0' = ifelse(A == 0, Y, Y - 27.4*X1),
+                   'method' = 'True Distibution w/in S = 1'),
+    df2 %>% mutate('mu1' = ifelse(A == 1, Y, Y + 27.4*X1),
+                   'mu0' = ifelse(A == 0, Y, Y - 27.4*X1),
+                   'method' = 'True Distibution w/in S = 1'),
+    df3 %>% mutate('mu1' = ifelse(A == 1, Y, Y + 27.4*X1),
+                   'mu0' = ifelse(A == 0, Y, Y - 27.4*X1),
+                   'method' = 'True Distibution w/in S = 1'),
+    
+    df1 %>% filter(S == 0) %>%  
+      mutate('mu1' = -100 + 27.4*X1 + 13.7 * (X1 + X2 + X3),
+             'mu0' = -100 + 13.7 * (X1 + X2 + X3),
+             'method' = 'True Distibution w/in S = 0'),
+    df2 %>% filter(S == 0) %>% 
+      mutate('mu1' = -100 + 27.4*X1 + 13.7 * (X1 + X2 + X3),
+             'mu0' = -100 + 13.7 * (X1 + X2 + X3),
+             'method' = 'True Distibution w/in S = 0'),
+    df3 %>% filter(S == 0) %>% 
+      mutate('mu1' = -100 + 27.4*X1 + 13.7 * (X1 + X2 + X3),
+             'mu0' = -100 + 13.7 * (X1 + X2 + X3),
+             'method' = 'True Distibution w/in S = 0')
+    
+    
+  )
+
+df_preds %>% 
+  pivot_longer(cols = contains('mu'),
+               names_to = 'mu', 
+               values_to = 'mu_hat') %>% 
+  ggplot(aes(x = mu_hat)) + 
+  facet_grid(kappa~mu) + 
+  geom_density(aes(fill = method), alpha = 0.5, rel_min_height = 0.01, scale = 0.7) + 
+  theme_bw() + 
+  theme(plot.title = element_text(hjust = 0.5, size = 24),
+        plot.subtitle = element_text(hjust = 0.5, size = 18),
+        axis.title = element_text(size = 20),
+        strip.text = element_text(size = 14),
+        plot.caption = element_text(size = 10),
+        legend.position = "bottom") + 
+  labs(x = 'Predicted Value',
+       y = 'Density',
+       fill = 'Outcome Model',
+       title = 'Distribution of Outcome Regression Predictions')
+
+ggsave('figures/outcome_dist.png', height = 12/1.2, width = 16/1.2)

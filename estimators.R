@@ -149,3 +149,38 @@ aipsw <- function(df, selection_formula, outcome_formula, model_type) {
   return(df_tau)
   
 }
+
+
+g_formula_preds <- function(df, model_type, model_formula) {
+  df_trial <- 
+    df %>% 
+    filter(S == 1)
+  
+  df_obs <- 
+    df %>% 
+    filter(S == 0)
+  
+  if(model_type == 'LM') {
+    outcome_model <- lm(model_formula, data = df_trial)
+    mu0 <- predict(outcome_model, newdata = mutate(df_obs, 'A' = 0))
+    mu1 <- predict(outcome_model, newdata = mutate(df_obs, 'A' = 1))
+  } else if(model_type == 'RF') {
+    outcome_model <- 
+      ranger(model_formula, 
+             data = interact(df_trial),
+             max.depth = 6)
+    
+    
+    
+    mu0 <- predict(outcome_model, data = interact(mutate(df_obs, 'A' = 0)))$predictions
+    mu1 <- predict(outcome_model, data = interact(mutate(df_obs, 'A' = 1)))$predictions 
+    
+  }
+  
+  df_tau <-
+    tibble('method' = model_type,
+           'mu0' = mu0,
+           'mu1' = mu1)
+  
+  return(df_tau)
+}
